@@ -2,18 +2,9 @@
 
 #pragma once
 
-#include "Engine/Engine.h"
-#include "Misc/DateTime.h"
-#include "Misc/Paths.h"
-#include "Internationalization/Regex.h"
-#include "GenericPlatform/GenericPlatformProcess.h"
-#include "Misc/DefaultValueHelper.h"
-#include "Misc/ConfigCacheIni.h"
-#include "Misc/EngineVersion.h"
-#include "Runtime/Launch/Resources/Version.h"
-#include "Async/Async.h"
-
+#include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Engine.h"
 #include "ProjectVersionFromGitBPLibrary.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE(FParseVersionDelegate);
@@ -34,6 +25,9 @@ class PROJECTVERSIONFROMGIT_API UProjectVersionFromGitBPLibrary : public UBluepr
 
 	UFUNCTION(BlueprintPure, Category = "ProjectVersionFromGit")
 	static int32 GetProjectVersionPatch();
+
+	UFUNCTION(BlueprintPure, Category = "ProjectVersionFromGit")
+	static int32 GetProjectVersionBuild();
 
 	UFUNCTION(BlueprintPure, Category = "ProjectVersionFromGit")
 	static FText GetProjectVersionBranchName();
@@ -61,6 +55,7 @@ private:
 	static int32 Major;
 	static int32 Minor;
 	static int32 Patch;
+	static int32 Build;
 
 	static FString SectionName;
 	static FString VersionFileIni;

@@ -2,6 +2,8 @@
 
 #include "ProjectVersionFromGitBPLibrary.h"
 #include "ProjectVersionFromGit.h"
+#include "Misc/DefaultValueHelper.h"
+#include "Async/Async.h"
 
 FText UProjectVersionFromGitBPLibrary::ProjectVersion 			= FText::GetEmpty();
 FText UProjectVersionFromGitBPLibrary::ProjectVersionFormatAll 	= FText::GetEmpty();
@@ -12,6 +14,7 @@ FText UProjectVersionFromGitBPLibrary::DateTimeBuild 			= FText::GetEmpty();
 int32 UProjectVersionFromGitBPLibrary::Major = 0;
 int32 UProjectVersionFromGitBPLibrary::Minor = 0;
 int32 UProjectVersionFromGitBPLibrary::Patch = 0;
+int32 UProjectVersionFromGitBPLibrary::Build = 0;
 
 FString UProjectVersionFromGitBPLibrary::SectionName	= FString(TEXT("VersionInfo"));
 FString UProjectVersionFromGitBPLibrary::VersionFileIni	= FString(TEXT("Version.ini"));
@@ -19,6 +22,8 @@ FString UProjectVersionFromGitBPLibrary::VersionFileIni	= FString(TEXT("Version.
 FString UProjectVersionFromGitBPLibrary::GitStdOutput = FString(TEXT(""));
 
 DEFINE_LOG_CATEGORY(ProjectVersionFromGit)
+
+#define USE_UNCLEAN_COMMIT_HASH 0
 
 UProjectVersionFromGitBPLibrary::UProjectVersionFromGitBPLibrary(const FObjectInitializer& ObjectInitializer)
 : Super(ObjectInitializer)
@@ -78,8 +83,30 @@ void UProjectVersionFromGitBPLibrary::GetProjectVersionInfo(FParseVersionDelegat
 
 			if (OutStdOut.IsEmpty())
 			{
-				ProjectVersion = FText::FromString(TEXT("0.0.0"));
-				Major = Minor = Patch = 0;
+				FString ConfigProjectVersion;
+				GConfig->GetString(
+					TEXT("/Script/EngineSettings.GeneralProjectSettings"),
+					TEXT("ProjectVersion"),
+					ConfigProjectVersion,
+					GGameIni
+				);
+				TArray<FString> VersionParts;
+				ConfigProjectVersion.ParseIntoArray(VersionParts, TEXT("."));
+
+				if (VersionParts.Num() == 4)
+				{
+					Major = FCString::Atoi(*VersionParts[0]);
+					Minor = FCString::Atoi(*VersionParts[1]);
+					Patch = FCString::Atoi(*VersionParts[2]);
+					Build = FCString::Atod(*VersionParts[3]);
+
+					ProjectVersion = FText::FromString(ConfigProjectVersion);
+				}
+				else
+				{
+					ProjectVersion = FText::FromString(TEXT("0.0.0.0"));
+					Major = Minor = Patch = Build = 0;
+				}
 			}
 			else
 			{
@@ -92,13 +119,14 @@ void UProjectVersionFromGitBPLibrary::GetProjectVersionInfo(FParseVersionDelegat
 					FDefaultValueHelper::ParseInt(OutArrayParse[0], Major);
 					FDefaultValueHelper::ParseInt(OutArrayParse[1], Minor);
 					FDefaultValueHelper::ParseInt(OutArrayParse[2], Patch);
+					Build = 0;
 
 					ProjectVersion = FText::FromString(OutStdOut);
 				}
 				else
 				{
 					ProjectVersion = FText::FromString(TEXT("0.0.0"));
-					Major = Minor = Patch = 0;
+					Major = Minor = Patch = Build = 0;
 				}
 			}
 			OutStdOut = FString(TEXT(""));
@@ -123,9 +151,10 @@ void UProjectVersionFromGitBPLibrary::GetProjectVersionInfo(FParseVersionDelegat
 			GitStdOutput = OutStdOut;
 			OutStdOut.Reset();
 
-			ExecProcess(TEXT("git"), TEXT("describe --always --abbrev=8"), &OutReturnCode, &OutStdOut, &OutStdErr, *OptionalWorkingDirectory);
+			ExecProcess(TEXT("git"), TEXT("describe --always --abbrev=7"), &OutReturnCode, &OutStdOut, &OutStdErr, *OptionalWorkingDirectory);
 			OutStdOut.TrimStartAndEndInline();
 				
+#if USE_UNCLEAN_COMMIT_HASH
 			if (GitStdOutput.IsEmpty())
 			{
 				CommitHash = FText::FromString(OutStdOut);
@@ -134,16 +163,17 @@ void UProjectVersionFromGitBPLibrary::GetProjectVersionInfo(FParseVersionDelegat
 			{
 				CommitHash = FText::FromString(FString(TEXT("unclean-")) + OutStdOut);
 			}
+#else
+			CommitHash = FText::FromString(OutStdOut);
+#endif
 			OutStdOut = FString(TEXT(""));
-
-
 			DateTimeBuild = FText::FromString(FDateTime::UtcNow().ToString() + TEXT("-UTC"));
 
 			ProjectVersionFormatAll = FText::Format(FText::FromString(TEXT("{0}-{1}-{2}-{3}")), ProjectVersion, BranchName, CommitHash, DateTimeBuild);
 
 			if (!GitStdOutput.IsEmpty())
 			{
-				UE_LOG(ProjectVersionFromGit, Warning, TEXT("-------- Git status --short: %s"), *GitStdOutput);
+				UE_LOG(ProjectVersionFromGit, Log, TEXT("-------- Git status --short: %s"), *GitStdOutput);
 			}
 			
 			FConfigFile ConfigFile;
@@ -174,6 +204,13 @@ void UProjectVersionFromGitBPLibrary::GetProjectVersionInfo(FParseVersionDelegat
 				*SectionName,
 				TEXT("Patch"),
 				Patch,
+				VersionFileIniPath
+			);
+
+			GConfig->SetInt(
+				*SectionName,
+				TEXT("Build"),
+				Build,
 				VersionFileIniPath
 			);
 
@@ -234,6 +271,13 @@ void UProjectVersionFromGitBPLibrary::GetProjectVersionInfo(FParseVersionDelegat
 				*SectionName,
 				TEXT("Patch"),
 				Patch,
+				VersionFileIniPath
+			);
+
+			GConfig->GetInt(
+				*SectionName,
+				TEXT("Build"),
+				Build,
 				VersionFileIniPath
 			);
 
@@ -313,6 +357,11 @@ int32 UProjectVersionFromGitBPLibrary::GetProjectVersionMinor()
 int32 UProjectVersionFromGitBPLibrary::GetProjectVersionPatch()
 {
 	return Patch;
+}
+
+int32 UProjectVersionFromGitBPLibrary::GetProjectVersionBuild()
+{
+	return Build;
 }
 
 FText UProjectVersionFromGitBPLibrary::GetProjectVersionDateTimeBuild()
