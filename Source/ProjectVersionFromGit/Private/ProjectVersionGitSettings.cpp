@@ -36,9 +36,9 @@ void UProjectVersionGitSettings::PostInitProperties()
     Super::PostInitProperties();
 
 #if WITH_EDITOR
-    static const FString ConfigIniName = TEXT("DefaultProjectVersionGitSettings.ini");
-    static const FString ConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(FString::Printf(TEXT("%s%s"), *FPaths::SourceConfigDir(), *ConfigIniName));
-    static const FString SectionName = TEXT("/Script/ProjectVersionFromGit.ProjectVersionGitSettings");
+	static const FString ConfigIniName = TEXT("EditorPerProjectUserSettings.ini");
+	static const FString ConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(FPaths::GeneratedConfigDir() / ANSI_TO_TCHAR(FPlatformProperties::PlatformName()) / *ConfigIniName);
+	static const FString SectionName = TEXT("/Script/ProjectVersionFromGit.ProjectVersionGitSettings");
 
     if (!FPaths::FileExists(ConfigIniPath))
     {
@@ -54,20 +54,26 @@ void UProjectVersionGitSettings::PostInitProperties()
 
         GConfig->Flush(false, ConfigIniPath);
 
-        UE_LOG(LogProjectVersionGitSettings, Log, TEXT("---> Created Config: %s, Path: %s"), *ConfigIniName, *ConfigIniPath);
+        UE_LOG(LogProjectVersionGitSettings, Log, TEXT("Created Config: %s, Path: %s"), *ConfigIniName, *ConfigIniPath);
     }
-    else
-    {
-        GConfig->GetString(
-            *SectionName,
-            TEXT("GitBinPath"),
-            GitBinPath,
-            ConfigIniPath
-        );
-    }
+	else
+	{
+		if (!GConfig->GetString(*SectionName, TEXT("GitBinPath"), GitBinPath, ConfigIniPath))
+		{
+			GConfig->SetString(
+				*SectionName,
+				TEXT("GitBinPath"),
+				*GitBinPath,
+				ConfigIniPath);
+
+			GConfig->Flush(false, ConfigIniPath);
+
+			UE_LOG(LogProjectVersionGitSettings, Log, TEXT("Added GitBinPath: %s to Config: %s, Path: %s"), *GitBinPath, *ConfigIniName, *ConfigIniPath);
+		}
+	}
 #endif // WITH_EDITOR
 
-    UE_LOG(LogProjectVersionGitSettings, Log, TEXT("---> PostInitProperties, GitBinPath: %s"), *GitBinPath);
+    UE_LOG(LogProjectVersionGitSettings, Log, TEXT("PostInitProperties, GitBinPath: %s"), *GitBinPath);
 
     OnPostInitPropertiesCompleted.Broadcast();
 }
@@ -77,7 +83,7 @@ void UProjectVersionGitSettings::PostEditChangeProperty(FPropertyChangedEvent& P
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
 
-    UE_LOG(LogProjectVersionGitSettings, Log, TEXT("---> PostEditChangeProperty, GitBinPath: %s"), *GitBinPath);
+    UE_LOG(LogProjectVersionGitSettings, Log, TEXT("PostEditChangeProperty, GitBinPath: %s"), *GitBinPath);
 
     OnPostEditChangePropertyCompleted.Broadcast();
 }
