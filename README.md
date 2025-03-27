@@ -6,6 +6,7 @@ This plugin set version for project from git tag format MAJOR.MINOR.PATCH also s
 - GetProjectVersionMajor()
 - GetProjectVersionMinor()
 - GetProjectVersionPatch()
+- GetProjectVersionBuild()
 - GetProjectVersionBranchName()
 - GetProjectVersionCommitHash()
 - GetProjectVersionDateTimeBuild()

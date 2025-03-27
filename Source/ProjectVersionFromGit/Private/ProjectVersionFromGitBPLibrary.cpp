@@ -22,8 +22,6 @@ FString UProjectVersionFromGitBPLibrary::GitStdOutput = FString(TEXT(""));
 
 DEFINE_LOG_CATEGORY(LogProjectVersionFromGitBPLibrary)
 
-#define USE_UNCLEAN_COMMIT_HASH 0
-
 UProjectVersionFromGitBPLibrary::UProjectVersionFromGitBPLibrary(const FObjectInitializer& ObjectInitializer)
 : Super(ObjectInitializer)
 {
@@ -174,18 +172,15 @@ void UProjectVersionFromGitBPLibrary::GetProjectVersionInfo(FParseVersionDelegat
 			ExecProcess(*Cfg->GitBinPath, TEXT("describe --always --abbrev=7"), &OutReturnCode, &OutStdOut, &OutStdErr, *OptionalWorkingDirectory);
 			OutStdOut.TrimStartAndEndInline();
 				
-#if USE_UNCLEAN_COMMIT_HASH
-			if (GitStdOutput.IsEmpty())
-			{
-				CommitHash = FText::FromString(OutStdOut);
-			}
-			else
+			if (Cfg->bUseUnCleanCommitHash && !GitStdOutput.IsEmpty())
 			{
 				CommitHash = FText::FromString(FString(TEXT("unclean-")) + OutStdOut);
 			}
-#else
-			CommitHash = FText::FromString(OutStdOut);
-#endif
+			else
+			{
+				CommitHash = FText::FromString(OutStdOut);
+			}
+
 			OutStdOut = FString(TEXT(""));
 			DateTimeBuild = FText::FromString(FDateTime::UtcNow().ToString() + TEXT("-UTC"));
 

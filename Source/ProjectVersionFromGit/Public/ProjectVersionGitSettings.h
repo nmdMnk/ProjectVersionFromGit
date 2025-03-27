@@ -14,7 +14,7 @@ DECLARE_MULTICAST_DELEGATE(FPostInitPropertiesDelegate);
 DECLARE_MULTICAST_DELEGATE(FPostEditChangePropertyDelegate);
 #endif
 
-UCLASS(Config = ProjectVersionGitSettings, DefaultConfig)
+UCLASS(Config = EditorPerProjectUserSettings)
 class PROJECTVERSIONFROMGIT_API UProjectVersionGitSettings : public UObject
 {
 	GENERATED_BODY()
@@ -32,4 +32,8 @@ public:
  
 	UPROPERTY(Config, EditAnywhere, Category = "Settings", DisplayName = "Path to git binary file")
 	FString GitBinPath;
+
+	// If true, the commit hash will be prefixed with "unclean-"
+	UPROPERTY(Config, EditAnywhere, Category = "Settings")
+	bool bUseUnCleanCommitHash;
 };

@@ -27,6 +27,8 @@ UProjectVersionGitSettings::UProjectVersionGitSettings(const FObjectInitializer&
 #else
     GitBinPath = "/usr/bin/git";
 #endif
+
+    bUseUnCleanCommitHash = false;
 }
 
 void UProjectVersionGitSettings::PostInitProperties()
